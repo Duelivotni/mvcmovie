@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -20,13 +16,15 @@ namespace MvcMovie.Controllers
             _context = context;
         }
 
-        // GET: Movies by Search String
-        public async Task<IActionResult> Index(string searchString)
+        // GET: Movies by Search String && genre
+        public async Task<IActionResult> Index(string movieGenre, string searchString)
         {
-            if (_context.Movie == null) 
+            if (_context.Movie == null)
             {
                 return Problem("Movie context is not set");
             }
+
+            var genreQuery = from m in _context.Movie orderby m.Genre select m.Genre;
 
             var movies = from m in _context.Movie select m;
 
@@ -36,7 +34,18 @@ namespace MvcMovie.Controllers
                     m => m.Title!.ToUpper().Contains(searchString.ToUpper()));
             }
 
-            return View(await movies.ToListAsync());
+            if (!movieGenre.IsNullOrEmpty())
+            {
+                movies = movies.Where(m => m.Genre == movieGenre);
+            }
+
+            var movieGenreVM = new MovieGenreViewModel
+            {
+                Genres = new SelectList(await genreQuery.Distinct().ToListAsync()),
+                Movies = await movies.ToListAsync(),
+            };
+
+            return View(movieGenreVM);
         }
 
         // GET: Movies/Details/5
